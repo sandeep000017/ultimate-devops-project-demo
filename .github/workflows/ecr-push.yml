@@ -33,5 +33,6 @@ jobs:
           cd src/product-catalog
           
           # Build and push using the directory's Dockerfile
-          docker build -t $ECR_REGISTRY/$AWS_ECR_REPO:$IMAGE_TAG .
+          docker build -t $AWS_ECR_REPO:$IMAGE_TAG .
+          docker tag $AWS_ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$AWS_ECR_REPO:$IMAGE_TAG
           docker push $ECR_REGISTRY/$AWS_ECR_REPO:$IMAGE_TAG
