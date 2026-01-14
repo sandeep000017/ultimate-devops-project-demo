@@ -37,7 +37,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_ID }}
           aws-region:            ${{ secrets.AWS_REGION }}
       # NOTE: This static-key method works, but OIDC is the recommended secure method
       # that issues short-lived credentials tied to your repo/branch. [1](https://www.trendsicle.com/sales/best-time-to-buy-an-air-conditioner/)
