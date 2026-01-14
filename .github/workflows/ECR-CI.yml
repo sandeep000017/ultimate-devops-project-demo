@@ -54,7 +54,7 @@ jobs:
 
       - name: Update Image Tag in Manifest
         run: |
-          IMAGE="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/learning:${IMAGE_TAG}"
+          IMAGE="281934899426.dkr.ecr.ap-south-1.amazonaws.com/learning:latest"
           sed -i "/name: *productcatalogservice/,/image:/s|^\([[:space:]]*image:\).*|\1 ${IMAGE}|" kubernetes/productcatalog/deploy.yaml
           cat kubernetes/productcatalog/deploy.yaml | grep image
     
