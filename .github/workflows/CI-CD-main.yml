@@ -35,7 +35,7 @@ jobs:
           # Build and push using the directory's Dockerfile
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
- updatek8s:
+  updatek8s:
         runs-on: ubuntu-latest
         steps:
         - name: checkout code
