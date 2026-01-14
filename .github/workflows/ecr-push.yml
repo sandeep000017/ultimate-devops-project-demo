@@ -1,34 +1,102 @@
-name: Build and Push Product Catalog to ECR
+
+name: Build & Deploy Product Catalog (CI + CD in one workflow)
 
 on:
   push:
     branches: [ "main" ]
-#    paths: [ "src/product-catalog/**" ] # Only trigger on changes to this service
+    # CI triggers only when service changes; CD can also be triggered by config changes
+    paths:
+      - "src/product-catalog/**"
+      - "kubernetes/productcatalog/**"
+      - "deploy/**"
+
+# Allow this workflow to commit back to the repo (CD step)
+permissions:
+  contents: write
+
+concurrency:
+  group: product-catalog-main
+  cancel-in-progress: true
+
+env:
+  # AWS_REGION: ap-south-1
+  ECR_REPOSITORY: learning           # <-- your ECR repo name
+  # ACCOUNT_ID: "123456789"            # <-- replace with your AWS Account ID
+  APP_NAME: product-catalog
+  IMAGE_TAG: ${{ github.sha }}       # immutable tag for traceability/rollbacks
 
 jobs:
-  deploy:
+  build_and_push:
+    name: CI — Build & Push image to ECR
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
-      - name: Configure AWS Credentials
+
+      - name: Configure AWS Credentials (static keys)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_ID }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+      # NOTE: This static-key method works, but OIDC is the recommended secure method
+      # that issues short-lived credentials tied to your repo/branch. [1](https://www.trendsicle.com/sales/best-time-to-buy-an-air-conditioner/)
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-        
-      - name: Build, Tag, and Push Image
+      # Logs Docker into ECR for push. [3](https://menatworkacrepair.com/best-worst-air-conditioner-brands-guide/)
+
+      - name: Build, Tag & Push
+        id: bp
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: learning
-          IMAGE_TAG: latest
         run: |
           cd src/product-catalog
+
+          IMAGE_URI="${REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          LATEST_URI="${REGISTRY}/${ECR_REPOSITORY}:latest"
+          echo "Building ${IMAGE_URI} ..."
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # docker tag "${IMAGE_URI}" "${LATEST_URI}" # # Optional convenience tag:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+  update_manifest:
+    name: CD — Update repo config (manifest.yaml) for Argo CD
+    runs-on: ubuntu-latest
+    needs: [ build_and_push ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install yq (safer YAML edit than sed)
+        run: |
+          curl -L https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o yq
+          chmod +x yq && sudo mv yq /usr/local/bin/yq
+
+      # --- Choose ONE of the following blocks depending on how you manage manifests ---
+
+      # (A) Plain manifest.yaml — update container image field in Deployment
+      - name: Update tag in kubernetes deployment manifest
+        run: | 
+             sed -i "s|image: .*|image: 281934899426.dkr.ecr.ap-south-1.amazonaws.com/learning:latest|" kubernetes/productcatalog/deploy.yaml
+          
+          # Path to your Kubernetes deployment manifest
+          # MANIFEST="kubernetes/productcatalog/deploy.yaml"
+          # Update the first container image field (adjust the path to match your YAML)
+          # Example assumes a standard Deployment spec:
+          # spec.template.spec.containers[0].image
+          # yq -i '.spec.template.spec.containers[0].image = env(IMAGE_URI)' "${MANIFEST}"
+
+      - name: Commit & Push (only if changed)
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name  "github-actions"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "[CI/CD] ${APP_NAME}: set image to ${IMAGE_URI}"
+            git push origin HEAD:main
+          else
+            echo "No changes to commit."
+          fi
