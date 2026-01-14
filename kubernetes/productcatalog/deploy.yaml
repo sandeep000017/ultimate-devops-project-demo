@@ -31,7 +31,7 @@ spec:
       serviceAccountName: opentelemetry-demo
       containers:
         - name: productcatalogservice
-          image: .dkr.ecr..amazonaws.com/learning:
+          image: 281934899426.dkr.ecr.ap-south-1.amazonaws.com/learning:latest
           imagePullPolicy: IfNotPresent
           ports:
             
