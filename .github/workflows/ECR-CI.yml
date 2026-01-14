@@ -50,11 +50,10 @@ jobs:
           token: ${{ secrets.GITOPS_PAT }}
 
       - name: Update Image Tag in Manifest
-        env:
-          NEW_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
-          IMAGE="${{ secrets.ECR_REGISTRY }}.${{ secrets.AWS_REGION }}$NEW_TAG"
-          sed -i "s|image: .*|image: $IMAGE|" kubernetes/productcatalog/deploy.yaml
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          sed -i "s|image: *|image: $IMAGE|" kubernetes/productcatalog/deploy.yaml
+          cat kubernetes/productcatalog/deploy.yaml | grep image
     
       - name: Commit and Push to GitOps
         run: |
