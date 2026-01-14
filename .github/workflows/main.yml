@@ -1,0 +1,56 @@
+name: Build and Push Product Catalog to ECR
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "src/product-catalog/**" ] # Only trigger on changes to this service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_ID }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        
+      - name: Build, Tag, and Push Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: learning
+          IMAGE_TAG: latest
+        run: |
+          # Navigate to the specific service directory
+          cd src/product-catalog
+          
+          # Build and push using the directory's Dockerfile
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+ updatek8s:
+        runs-on: ubuntu-latest
+        steps:
+        - name: checkout code
+          uses: actions/checkout@v4
+          # with:
+          #   token: ${{ secrets.GITHUB_TOKEN }}
+
+        - name: Update tag in kubernetes deployment manifest
+          run: | 
+               sed -i "s|image: .*|image: ${{ secrets.ECR_REGISTRY }}/product-catalog:${{github.IMAGE_TAG}}|" kubernetes/productcatalog/deploy.yaml
+        
+        - name: Commit and push changes
+          run: |
+            git config --global user.email "sandeeptalluri017@gmail.com"
+            git config --global user.name "Sandeep000017"
+            git add kubernetes/productcatalog/deploy.yaml
+            git commit -m "[CI]: Update product catalog image tag"
+            git push origin HEAD:main -f
