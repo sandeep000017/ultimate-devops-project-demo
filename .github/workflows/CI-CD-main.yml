@@ -45,7 +45,7 @@ jobs:
 
     - name: Update tag in kubernetes deployment manifest
       run: | 
-            sed -i "s|image: .*|image: ${{ secrets.ECR_REGISTRY }}/product-catalog:${{github.IMAGE_TAG}}|" kubernetes/productcatalog/deploy.yaml
+            sed -i "s|image: .*|image: 281934899426.dkr.ecr.ap-south-1.amazonaws.com/learning:latest|" kubernetes/productcatalog/deploy.yaml
     
     - name: Commit and push changes
       run: |
