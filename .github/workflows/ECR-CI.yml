@@ -56,7 +56,7 @@ jobs:
     
       - name: Commit and Push to GitOps
         run: |
-          git config --global user.email "sandeeptalluri0107@gmail.com"
+          git config --global user.email "sandeeptalluri017@gmail.com"
           git config --global user.name "sandeep000017"
           git add kubernetes/productcatalog/deploy.yaml
           git commit -m "[CI]: Update catalog to ${{ needs.build-and-push.outputs.image_tag }}"
