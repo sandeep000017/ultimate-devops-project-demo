@@ -3,7 +3,7 @@ name: Build and Push Product Catalog to ECR
 on:
   push:
     branches: [ "main" ]
-    paths: [ "src/product-catalog/**" ] # Only trigger on changes to this service
+    # paths: [ "src/product-catalog/**" ] # Only trigger on changes to this service
 
 jobs:
   deploy:
